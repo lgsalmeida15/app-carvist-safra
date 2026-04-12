@@ -124,12 +124,12 @@ if ($is_ajax) {
                     <tr><td colspan="16" style="text-align: center;">Nenhum registro encontrado.</td></tr>
                 <?php else: ?>
                     <?php foreach ($data as $row): ?>
-                        <tr>
+                        <tr id="row-<?php echo $row['id_laudo']; ?>">
                             <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
                             <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
                             <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                             <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
-                            <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input"></td>
+                            <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input data-input"></td>
                             <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
                             <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
@@ -211,12 +211,30 @@ if ($is_ajax) {
         tr.selected { background-color: var(--row-selected) !important; }
         .edit-input { width: 100%; box-sizing: border-box; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
+        
+        /* Tarjas Animadas */
+        .tarja-animada {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .tarja-sucesso-small { background: #27ae60; color: #fff; animation: none; }
+        .tarja-erro-small { background: #e74c3c; color: #fff; animation: none; }
+
         .banner { padding: 12px; border-radius: 4px; margin-bottom: 15px; border: 1px solid transparent; display: flex; align-items: center; gap: 10px; }
         .error-banner { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
         .success-banner { background: #d4edda; color: #155724; border-color: #c3e6cb; }
-        .tarja-animada { padding: 5px 15px; border-radius: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-        .tarja-sucesso-small { background: #27ae60; color: #fff; }
-        .tarja-erro-small { background: #e74c3c; color: #fff; }
+        
         .link-btn { display: inline-block; padding: 4px 8px; background: var(--primary-color); color: white; border-radius: 4px; text-decoration: none; font-size: 10px; }
     </style>
 </head>
@@ -301,12 +319,12 @@ require __DIR__ . '/includes/header.php';
                         <tr><td colspan="16" style="text-align: center;">Nenhum registro encontrado.</td></tr>
                     <?php else: ?>
                         <?php foreach ($data as $row): ?>
-                            <tr>
+                            <tr id="row-<?php echo $row['id_laudo']; ?>">
                                 <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
                                 <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
                                 <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                                 <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
-                                <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input"></td>
+                                <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input data-input"></td>
                                 <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
                                 <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
@@ -372,6 +390,16 @@ require __DIR__ . '/includes/header.php';
         }
 
         rowCheckboxes.forEach(cb => cb.addEventListener('change', updateUI));
+
+        const dataInputs = document.querySelectorAll('.data-input');
+        dataInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const row = e.target.closest('tr');
+                const checkbox = row.querySelector('.row-checkbox');
+                checkbox.checked = true;
+                updateUI();
+            });
+        });
     }
 
     function updateUI() {
@@ -467,7 +495,9 @@ require __DIR__ . '/includes/header.php';
         const params = new URLSearchParams(formData);
         params.append('table', 'safra_segunda_via');
         
+        showLoading('Preparando exportação...');
         window.location.href = 'export.php?' + params.toString();
+        setTimeout(hideLoading, 2000);
     });
 </script>
 

@@ -18,7 +18,7 @@ if (!empty($carvist_container_wide)) {
 <div class="top-bar">
     <div class="top-bar-left">
         <img src="https://play-lh.googleusercontent.com/W8D5lTcX4oAlGYHeS7QDkHK2EaOPyE2bzNtjMUkHZjvIJyrXp9QIl3eW55Jr3_H3yEaph97cX6iy_IFPwy9QtaA=w240-h480-rw" alt="Logo" class="top-bar-logo">
-        <h1 class="top-bar-title">SISTEMA CARVIST</h1>
+        <h1 class="top-bar-title">RELATÓRIO CARVIST</h1>
     </div>
     <div class="top-bar-right">
         <button type="button" class="theme-toggle" id="themeToggle">Alternar Tema</button>
@@ -31,4 +31,5 @@ if (!empty($carvist_container_wide)) {
         <a href="index.php" class="nav-link<?php echo $navActive('matriz'); ?>">Matriz Safra</a>
         <a href="combos.php" class="nav-link<?php echo $navActive('combos'); ?>">Safra Combos</a>
         <a href="segunda_via.php" class="nav-link<?php echo $navActive('segunda_via'); ?>">Safra 2ª VIA+</a>
+        <a href="docs.php" class="nav-link<?php echo $navActive('docs'); ?>">Documentação</a>
     </nav>
