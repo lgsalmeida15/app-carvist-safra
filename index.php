@@ -60,7 +60,6 @@ $servico = isset($_GET['servico']) ? trim($_GET['servico']) : '';
 $enviada = isset($_GET['enviada']) ? trim($_GET['enviada']) : '';
 $data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
 $data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
-$sql_extra = isset($_GET['sql_extra']) ? trim($_GET['sql_extra']) : '';
 
 $where = ["1=1"];
 $params = [];
@@ -97,23 +96,7 @@ if ($data_fim !== '') {
     $params['data_fim'] = $data_fim;
 }
 
-$forbidden_words = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'TRUNCATE', 'ALTER', 'GRANT', 'REVOKE'];
-$sql_extra_safe = true;
-foreach ($forbidden_words as $word) {
-    if (stripos($sql_extra, $word) !== false) {
-        $sql_extra_safe = false;
-        break;
-    }
-}
-
 $where_clause = implode(' AND ', $where);
-if ($sql_extra !== '' && $sql_extra_safe) {
-    if (stripos(trim($sql_extra), 'AND') !== 0 && stripos(trim($sql_extra), 'OR') !== 0) {
-        $where_clause .= " AND " . $sql_extra;
-    } else {
-        $where_clause .= " " . $sql_extra;
-    }
-}
 
 try {
     $count_sql = "SELECT COUNT(*) FROM matriz_safra WHERE $where_clause";
@@ -191,44 +174,44 @@ if ($is_ajax) {
                             </td>
                             <td><?php echo $row['id']; ?></td>
                             <td><?php echo $row['laudo_data'] ? date('d/m/Y', strtotime($row['laudo_data'])) : '-'; ?></td>
-                            <td><strong><?php echo htmlspecialchars($row['placa']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                             <td>
                                 <input type="text" name="valor[<?php echo $row['id']; ?>]" 
-                                       value="<?php echo number_format($row['valor'], 2, '.', ''); ?>" 
+                                       value="<?php echo number_format((float)($row['valor'] ?? 0), 2, '.', ''); ?>" 
                                        class="edit-input edit-input-valor data-input">
                             </td>
                             <td>
                                 <select name="servico_edit[<?php echo $row['id']; ?>]" class="edit-input data-input">
                                     <?php foreach ($servicos_list as $s): ?>
-                                        <option value="<?php echo htmlspecialchars($s); ?>" <?php echo $row['servico'] === $s ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($s); ?>
+                                        <option value="<?php echo htmlspecialchars($s ?? ''); ?>" <?php echo ($row['servico'] ?? '') === $s ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($s ?? ''); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
                             </td>
                             <td>
                                 <input type="text" name="via_ecv[<?php echo $row['id']; ?>]" 
-                                       value="<?php echo htmlspecialchars($row['via_ecv']); ?>" 
+                                       value="<?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?>" 
                                        class="edit-input data-input">
                             </td>
                             <td>
-                                <span class="status-badge status-<?php echo $row['enviada_ao_banco'] ? 'true' : 'false'; ?>">
-                                    <?php echo $row['enviada_ao_banco'] ? 'SIM' : 'NÃO'; ?>
+                                <span class="status-badge status-<?php echo ($row['enviada_ao_banco'] ?? false) ? 'true' : 'false'; ?>">
+                                    <?php echo ($row['enviada_ao_banco'] ?? false) ? 'SIM' : 'NÃO'; ?>
                                 </span>
                             </td>
-                            <td><small><?php echo htmlspecialchars($row['patio']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['marca']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['modelo']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['ano_modelo']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['cor']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['chassi']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['cidade']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['uf']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['unidade_negocio']); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['numero_laudo']); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['ano_modelo'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['unidade_negocio'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                             <td>
-                                <?php if ($row['link_ecv']): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_ecv']); ?>" target="_blank" class="link-btn">ECV</a><?php endif; ?>
-                                <?php if ($row['link_avaliacao']): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao']); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
+                                <?php if ($row['link_ecv'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_ecv'] ?? ''); ?>" target="_blank" class="link-btn">ECV</a><?php endif; ?>
+                                <?php if ($row['link_avaliacao'] ?? ''): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao'] ?? ''); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

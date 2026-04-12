@@ -20,7 +20,6 @@ if ($table === 'matriz_safra') {
     $enviada = isset($_GET['enviada']) ? trim($_GET['enviada']) : '';
     $data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
     $data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
-    $sql_extra = isset($_GET['sql_extra']) ? trim($_GET['sql_extra']) : '';
 
     if ($placa !== '') {
         $where[] = "placa ILIKE :placa";
@@ -42,21 +41,6 @@ if ($table === 'matriz_safra') {
     if ($data_fim !== '') {
         $where[] = "laudo_data <= :data_fim";
         $params['data_fim'] = $data_fim;
-    }
-
-    // SQL Extra Safe Check
-    if ($sql_extra !== '') {
-        $forbidden_words = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'TRUNCATE', 'ALTER', 'GRANT', 'REVOKE'];
-        $sql_extra_safe = true;
-        foreach ($forbidden_words as $word) {
-            if (stripos($sql_extra, $word) !== false) {
-                $sql_extra_safe = false;
-                break;
-            }
-        }
-        if ($sql_extra_safe) {
-            $where[] = "($sql_extra)";
-        }
     }
     $order_by = "id DESC";
 } elseif ($table === 'safra_combos') {
