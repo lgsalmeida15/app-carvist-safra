@@ -126,24 +126,24 @@ if ($is_ajax) {
                     <?php foreach ($data as $row): ?>
                         <tr>
                             <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
-                            <td><small><?php echo htmlspecialchars($row['via_ecv']); ?></small></td>
-                            <td><strong><?php echo htmlspecialchars($row['placa']); ?></strong></td>
-                            <td><small><?php echo htmlspecialchars($row['id_laudo']); ?></small></td>
-                            <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel']); ?>" class="edit-input rel-input"></td>
-                                <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
-                                <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
-                                <td>
-                                    <?php if ($row['link_laudo']): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo'] ?? ''); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
-                                </td>
-                                <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
+                            <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
+                            <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
+                            <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input"></td>
+                            <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
+                            <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
+                            <td>
+                                <?php if ($row['link_laudo'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo'] ?? ''); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
+                            </td>
+                            <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -303,24 +303,24 @@ require __DIR__ . '/includes/header.php';
                         <?php foreach ($data as $row): ?>
                             <tr>
                                 <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
-                                <td><small><?php echo htmlspecialchars($row['via_ecv']); ?></small></td>
-                                <td><strong><?php echo htmlspecialchars($row['placa']); ?></strong></td>
-                                <td><small><?php echo htmlspecialchars($row['id_laudo']); ?></small></td>
-                                <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel']); ?>" class="edit-input rel-input"></td>
-                                <td>R$ <?php echo number_format($row['valor'], 2, ',', '.'); ?></td>
-                                <td><small><?php echo htmlspecialchars($row['tipo_laudo']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['numero_laudo']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['status_envio']); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
+                                <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
+                                <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
+                                <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input"></td>
+                                <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
+                                <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
                                 <td>
-                                    <?php if ($row['link_laudo']): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo']); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
+                                    <?php if ($row['link_laudo'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo'] ?? ''); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
                                 </td>
-                                <td><small><?php echo htmlspecialchars($row['marca']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['modelo']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['ano']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cor']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cidade']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['uf']); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['chassi']); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
