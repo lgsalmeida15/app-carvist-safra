@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "Acesso Restrito - Sistema Carvist"
+AuthUserFile "c:/xampp2/htdocs/carvist/.htpasswd"
+Require valid-user

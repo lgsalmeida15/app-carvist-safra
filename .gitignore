@@ -1,0 +1,6 @@
+.env
+.htpasswd
+vendor/
+*.log
+.vscode/
+.cursor/
