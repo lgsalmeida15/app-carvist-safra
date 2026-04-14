@@ -135,7 +135,13 @@ if ($is_ajax) {
                             <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                             <td>
-                                <?php if ($row['link_ecv'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_ecv'] ?? ''); ?>" target="_blank" class="link-btn">ECV</a><?php endif; ?>
+                                    <?php 
+                                        $link_ecv = $row['link_ecv'] ?? '';
+                                        $url_ecv = (strpos($link_ecv, 'vistoriago.com.br') !== false) ? $link_ecv : "https://www.vistoriago.com.br/" . $link_ecv;
+                                        if ($link_ecv): 
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($url_ecv); ?>" target="_blank" class="link-btn">ECV</a>
+                                    <?php endif; ?>
                                 <?php if ($row['link_avaliacao'] ?? ''): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao'] ?? ''); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
                             </td>
                             <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
@@ -331,7 +337,13 @@ require __DIR__ . '/includes/header.php';
                                 <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                                 <td>
-                                    <?php if ($row['link_ecv'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_ecv'] ?? ''); ?>" target="_blank" class="link-btn">ECV</a><?php endif; ?>
+                                    <?php 
+                                        $link_ecv = $row['link_ecv'] ?? '';
+                                        $url_ecv = (strpos($link_ecv, 'vistoriago.com.br') !== false) ? $link_ecv : "https://www.vistoriago.com.br/" . $link_ecv;
+                                        if ($link_ecv): 
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($url_ecv); ?>" target="_blank" class="link-btn">ECV</a>
+                                    <?php endif; ?>
                                     <?php if ($row['link_avaliacao'] ?? ''): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao'] ?? ''); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
                                 </td>
                                 <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>

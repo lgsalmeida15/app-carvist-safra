@@ -135,7 +135,13 @@ if ($is_ajax) {
                             <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
                             <td>
-                                <?php if ($row['link_laudo'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo'] ?? ''); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
+                                    <?php 
+                                        $link_laudo = $row['link_laudo'] ?? '';
+                                        $url_laudo = (strpos($link_laudo, 'vistoriago.com.br') !== false) ? $link_laudo : "https://www.vistoriago.com.br/" . $link_laudo;
+                                        if ($link_laudo): 
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($url_laudo); ?>" target="_blank" class="link-btn">LAUDO</a>
+                                    <?php endif; ?>
                             </td>
                             <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
@@ -330,7 +336,13 @@ require __DIR__ . '/includes/header.php';
                                 <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
                                 <td>
-                                    <?php if ($row['link_laudo'] ?? ''): ?><a href="https://www.vistoriago.com.br/<?php echo htmlspecialchars($row['link_laudo'] ?? ''); ?>" target="_blank" class="link-btn">LAUDO</a><?php endif; ?>
+                                    <?php 
+                                        $link_laudo = $row['link_laudo'] ?? '';
+                                        $url_laudo = (strpos($link_laudo, 'vistoriago.com.br') !== false) ? $link_laudo : "https://www.vistoriago.com.br/" . $link_laudo;
+                                        if ($link_laudo): 
+                                    ?>
+                                        <a href="<?php echo htmlspecialchars($url_laudo); ?>" target="_blank" class="link-btn">LAUDO</a>
+                                    <?php endif; ?>
                                 </td>
                                 <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
