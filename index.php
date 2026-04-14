@@ -57,6 +57,7 @@ $offset = ($page - 1) * $limit;
 
 $placa = isset($_GET['placa']) ? strtoupper(trim($_GET['placa'])) : '';
 $servico = isset($_GET['servico']) ? trim($_GET['servico']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $enviada = isset($_GET['enviada']) ? trim($_GET['enviada']) : '';
 $data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
 $data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
@@ -78,6 +79,11 @@ if ($placa !== '') {
 if ($servico !== '') {
     $where[] = "servico = :servico";
     $params['servico'] = $servico;
+}
+
+if ($status_filter !== '') {
+    $where[] = "status = :status";
+    $params['status'] = $status_filter;
 }
 
 if ($enviada === 'sim') {
@@ -123,8 +129,10 @@ if (!isset($error_msg)) {
 }
 
 $servicos_list = [];
+$status_list = [];
 try {
     $servicos_list = $pdo->query("SELECT DISTINCT servico FROM matriz_safra WHERE servico IS NOT NULL ORDER BY servico")->fetchAll(PDO::FETCH_COLUMN);
+    $status_list = $pdo->query("SELECT DISTINCT status FROM matriz_safra WHERE status IS NOT NULL ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {}
 
 // --- RESPOSTA AJAX ---
@@ -149,6 +157,8 @@ if ($is_ajax) {
                     <th>Serviço (Editável)</th>
                     <th>VIA ECV (Editável)</th>
                     <th>Enviada?</th>
+                    <th>Rel</th>
+                    <th>Status</th>
                     <th>Patio</th>
                     <th>Marca</th>
                     <th>Modelo</th>
@@ -199,6 +209,8 @@ if ($is_ajax) {
                                     <?php echo ($row['enviada_ao_banco'] ?? false) ? 'SIM' : 'NÃO'; ?>
                                 </span>
                             </td>
+                            <td><small><?php echo htmlspecialchars($row['rel'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
@@ -302,27 +314,47 @@ if ($is_ajax) {
 
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             align-items: end;
         }
 
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
 
-        label { font-weight: bold; }
+        label { font-weight: bold; margin-bottom: 2px; }
 
         input, select, textarea {
-            padding: 6px;
+            padding: 8px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             background: var(--card-bg);
             color: var(--text-color);
             font-size: var(--font-size);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         textarea { height: 50px; resize: vertical; }
 
-        .btn-group { display: flex; gap: 10px; align-items: center; }
+        .btn-group { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            flex-wrap: wrap;
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        @media (min-width: 1200px) {
+            .filter-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+            .btn-group {
+                grid-column: span 6;
+            }
+        }
 
         button, .btn {
             padding: 8px 15px;
@@ -459,6 +491,17 @@ require __DIR__ . '/includes/header.php';
                     </select>
                 </div>
                 <div class="filter-group">
+                    <label for="status">Status</label>
+                    <select name="status" id="status">
+                        <option value="">Todos</option>
+                        <?php foreach ($status_list as $st): ?>
+                            <option value="<?php echo htmlspecialchars($st); ?>" <?php echo $status_filter === $st ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($st); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label for="enviada">Enviada?</label>
                     <select name="enviada" id="enviada">
                         <option value="">Todos</option>
@@ -513,6 +556,8 @@ require __DIR__ . '/includes/header.php';
                         <th>Serviço (Editável)</th>
                         <th>VIA ECV (Editável)</th>
                         <th>Enviada?</th>
+                        <th>Rel</th>
+                        <th>Status</th>
                         <th>Patio</th>
                         <th>Marca</th>
                         <th>Modelo</th>
@@ -563,6 +608,8 @@ require __DIR__ . '/includes/header.php';
                                         <?php echo ($row['enviada_ao_banco'] ?? false) ? 'SIM' : 'NÃO'; ?>
                                     </span>
                                 </td>
+                                <td><small><?php echo htmlspecialchars($row['rel'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
@@ -708,12 +755,16 @@ require __DIR__ . '/includes/header.php';
         loadData(page);
     }
 
-    // Debounce na busca por placa
+    // Debounce na busca por placa e mudança nos selects
     document.getElementById('placa').addEventListener('input', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             loadData(1);
         }, 500);
+    });
+
+    ['servico', 'status', 'enviada'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => loadData(1));
     });
 
     filterForm.addEventListener('submit', (e) => {

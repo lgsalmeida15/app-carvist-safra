@@ -109,6 +109,7 @@ if ($is_ajax) {
                     <th>Tipo Laudo</th>
                     <th>Nº Laudo</th>
                     <th>Status Envio</th>
+                    <th>Status</th>
                     <th>Link Laudo</th>
                     <th>Marca</th>
                     <th>Modelo</th>
@@ -134,6 +135,7 @@ if ($is_ajax) {
                             <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                             <td>
                                     <?php 
                                         $link_laudo = $row['link_laudo'] ?? '';
@@ -310,6 +312,7 @@ require __DIR__ . '/includes/header.php';
                         <th>Tipo Laudo</th>
                         <th>Nº Laudo</th>
                         <th>Status Envio</th>
+                        <th>Status</th>
                         <th>Link Laudo</th>
                         <th>Marca</th>
                         <th>Modelo</th>
@@ -335,6 +338,7 @@ require __DIR__ . '/includes/header.php';
                                 <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                                 <td>
                                     <?php 
                                         $link_laudo = $row['link_laudo'] ?? '';
