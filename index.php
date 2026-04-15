@@ -57,7 +57,10 @@ $offset = ($page - 1) * $limit;
 
 $placa = isset($_GET['placa']) ? strtoupper(trim($_GET['placa'])) : '';
 $servico = isset($_GET['servico']) ? trim($_GET['servico']) : '';
-$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$status_filter = isset($_GET['status']) ? (is_array($_GET['status']) ? $_GET['status'] : [trim($_GET['status'])]) : [];
+// Remove valores vazios do array de status
+$status_filter = array_filter($status_filter, function($v) { return $v !== ''; });
+
 $enviada = isset($_GET['enviada']) ? trim($_GET['enviada']) : '';
 $data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
 $data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
@@ -81,9 +84,14 @@ if ($servico !== '') {
     $params['servico'] = $servico;
 }
 
-if ($status_filter !== '') {
-    $where[] = "status = :status";
-    $params['status'] = $status_filter;
+if (!empty($status_filter)) {
+    $status_placeholders = [];
+    foreach ($status_filter as $i => $st) {
+        $key = "status_" . $i;
+        $status_placeholders[] = ":" . $key;
+        $params[$key] = $st;
+    }
+    $where[] = "status IN (" . implode(',', $status_placeholders) . ")";
 }
 
 if ($enviada === 'sim') {
@@ -265,6 +273,8 @@ if ($is_ajax) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matriz Safra - Listagem</title>
     <link rel="stylesheet" href="includes/app-shell.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -450,6 +460,30 @@ if ($is_ajax) {
         .status-true { background: #d4edda; color: #155724; }
         .status-false { background: #f8d7da; color: #721c24; }
         .link-btn { display: inline-block; padding: 4px 8px; background: var(--primary-color); color: white; border-radius: 4px; text-decoration: none; font-size: 10px; }
+        /* Estilos Select2 para Tema Dark */
+        [data-theme="dark"] .select2-container--default .select2-selection--multiple {
+            background-color: #2d2d2d;
+            border-color: #444;
+        }
+        [data-theme="dark"] .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #444;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+        [data-theme="dark"] .select2-dropdown {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            border-color: #444;
+        }
+        [data-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--primary-color);
+        }
+        [data-theme="dark"] .select2-container--default .select2-results__option[aria-selected=true] {
+            background-color: #3d3d3d;
+        }
+        [data-theme="dark"] .select2-container--default .select2-search--inline .select2-search__field {
+            color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -492,10 +526,9 @@ require __DIR__ . '/includes/header.php';
                 </div>
                 <div class="filter-group">
                     <label for="status">Status</label>
-                    <select name="status" id="status">
-                        <option value="">Todos</option>
+                    <select name="status[]" id="status" multiple="multiple">
                         <?php foreach ($status_list as $st): ?>
-                            <option value="<?php echo htmlspecialchars($st); ?>" <?php echo $status_filter === $st ? 'selected' : ''; ?>>
+                            <option value="<?php echo htmlspecialchars($st); ?>" <?php echo in_array($st, $status_filter) ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($st); ?>
                             </option>
                         <?php endforeach; ?>
@@ -651,7 +684,20 @@ require __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<script>
+    <!-- jQuery e Select2 JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('#status').select2({
+            placeholder: "Todos os Status",
+            allowClear: true,
+            width: '100%'
+        }).on('change', function() {
+            loadData(1);
+        });
+    });
+
     // Tema Dark/Light
     const themeToggle = document.getElementById('themeToggle');
     const currentTheme = localStorage.getItem('theme') || 'light';
@@ -763,7 +809,7 @@ require __DIR__ . '/includes/header.php';
         }, 500);
     });
 
-    ['servico', 'status', 'enviada'].forEach(id => {
+    ['servico', 'enviada'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => loadData(1));
     });
 
