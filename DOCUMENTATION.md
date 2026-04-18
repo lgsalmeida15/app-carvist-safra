@@ -7,9 +7,10 @@ O Sistema Carvist é uma plataforma interna para gestão e auditoria de laudos d
 
 ## 2. Arquitetura Técnica
 *   **Linguagem:** PHP 8.1+
-*   **Banco de Dados:** PostgreSQL 15+
+*   **Banco de Dados:** PostgreSQL 15+ (Tabelas: `matriz_safra`, `unidade_negocio_apigo`, `tabela_precos_vistorias`)
+*   **Views de Auditoria:** `vw_safra_combos`, `vw_safra_ecv_demais_vias`
 *   **Servidor Web:** Apache (XAMPP)
-*   **Interface:** HTML5, CSS3 (App Shell Design), JavaScript Vanilla (AJAX).
+*   **Interface:** HTML5, CSS3 (App Shell Design), JavaScript Vanilla (AJAX/Fetch), jQuery + Select2.
 
 ## 3. Segurança
 A segurança é tratada em múltiplas camadas:
@@ -20,17 +21,34 @@ A segurança é tratada em múltiplas camadas:
 
 ### 3.2. Segurança de Dados (SQL Injection)
 *   **PDO Prepared Statements:** Todas as consultas ao banco de dados utilizam `PDO::prepare()` e marcadores nomeados. Isso neutraliza ataques de SQL Injection, tratando entradas de usuário estritamente como dados.
-*   **Remoção de SQL Dinâmico:** Parâmetros de injeção manual (como o antigo `sql_extra`) foram removidos em favor de filtros estruturados.
+*   **Remoção de SQL Dinâmico:** Parâmetros de injeção manual foram removidos em favor de filtros estruturados.
 
 ### 3.3. Integridade de Exibição (XSS)
 *   **Sanitização de Saída:** Todos os dados exibidos nas tabelas passam pela função `htmlspecialchars()`, prevenindo a execução de scripts maliciosos injetados no banco de dados.
 
 ## 4. Funcionalidades Principais
-*   **Matriz Safra:** Gestão principal de laudos com edição de valores e serviços.
-*   **Safra Combos & 2ª Via:** Auditoria de registros específicos com edição em massa do campo REL.
-*   **Exportação:** Geração de arquivos CSV baseada nos filtros aplicados em tela.
-*   **Interface Responsiva:** Suporte a Tema Escuro (Dark Mode) e feedbacks visuais animados para ações do usuário.
 
-## 5. Manutenção e Boas Práticas
-*   **Configurações:** Variáveis de ambiente devem ser mantidas no arquivo `.env`.
-*   **Nulos:** O código está preparado para o PHP 8.1+, tratando valores nulos com o operador `??` para evitar avisos de depreciação em funções de formatação.
+### 4.1. Módulos de Gestão
+*   **Matriz Safra (`index.php`):** Gestão principal de laudos com edição de `via_laudo`, `valor`, `servico`, `rel`, `uf_vistoriador` e status de envio ao banco. Possui edição em massa para o campo `REL`.
+*   **Unidades de Negócio (`unidades.php`):** Cadastro e edição de unidades de negócio, permitindo ativar/desativar e vincular clientes.
+*   **Tabela de Preços (`tabela_precos.php`):** Gestão de valores por tipo de serviço, modalidade e região.
+
+### 4.2. Módulos de Auditoria (Read-only)
+*   **Safra Combos (`combos.php`):** Visualização de registros baseada na view `vw_safra_combos`.
+*   **Safra 2ª VIA+ (`segunda_via.php`):** Visualização de registros baseada na view `vw_safra_ecv_demais_vias`.
+
+### 4.3. Recursos Transversais
+*   **Exportação:** Geração de arquivos CSV (`export.php`) baseada nos filtros aplicados em tela para todas as tabelas e views.
+*   **Interface Responsiva:** Suporte a Tema Escuro (Dark Mode) sincronizado via `localStorage` e feedbacks visuais animados (App Shell).
+*   **Filtros Dinâmicos:** Filtros com debounce e suporte a múltipla seleção (Select2).
+
+## 5. Automação n8n
+O sistema é alimentado por workflows do n8n que realizam:
+1.  **Ingestão:** Daily Job para coleta de dados do VISTORIAGO.
+2.  **Higienização:** Remoção de duplicidades e ordenação cronológica.
+3.  **Enriquecimento:** Consulta à API da Otmiza para identificação de pátios e ECVs.
+
+## 6. Manutenção e Boas Práticas
+*   **Configurações:** Variáveis de ambiente devem ser mantidas no arquivo `.env` e carregadas via `includes/Env.php`.
+*   **Nulos:** O código utiliza o operador `??` para tratar valores nulos, garantindo compatibilidade com PHP 8.1+.
+*   **Conexão:** Centralizada em `config.php` utilizando PDO.

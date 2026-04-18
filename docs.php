@@ -187,7 +187,7 @@ $carvist_nav_active = 'docs';
 
 <div class="docs-wrapper">
     
-    <!-- Seção 1: Visão Geral (DOCUMENTATION.md) -->
+    <!-- Seção 1: Visão Geral -->
     <section class="docs-section">
         <h2>1. Visão Geral do Sistema</h2>
         <p>O <strong>Sistema Carvist</strong> é uma plataforma interna para gestão e auditoria de laudos de vistoria (Matriz Safra, Combos e 2ª Via). Ele permite a visualização, edição e exportação de dados integrados com um banco de dados PostgreSQL.</p>
@@ -199,7 +199,7 @@ $carvist_nav_active = 'docs';
             </div>
             <div class="docs-card">
                 <strong>Interface</strong>
-                HTML5 / CSS3 (App Shell) / JS Vanilla
+                HTML5 / CSS3 (App Shell) / JS Vanilla / jQuery + Select2
             </div>
             <div class="docs-card">
                 <strong>Segurança</strong>
@@ -215,9 +215,69 @@ $carvist_nav_active = 'docs';
         </ul>
     </section>
 
-    <!-- Seção 2: Automações n8n -->
+    <!-- Seção 2: Módulos do Sistema -->
     <section class="docs-section">
-        <h2>2. Automação de Relatórios Safra (n8n)</h2>
+        <h2>2. Módulos e Funcionalidades</h2>
+        
+        <h3>Gestão Ativa</h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Módulo</th>
+                        <th>Descrição</th>
+                        <th>Principais Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Matriz Safra</strong></td>
+                        <td>Gestão principal de laudos.</td>
+                        <td>Edição de valores, serviços, REL (em massa) e status de envio.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Unidades de Negócio</strong></td>
+                        <td>Controle de clientes e pátios.</td>
+                        <td>Ativar/Inativar unidades e vincular clientes.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tabela de Preços</strong></td>
+                        <td>Configuração de valores de vistorias.</td>
+                        <td>Definição de preços por região e modalidade.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Auditoria (Visualização)</h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Módulo</th>
+                        <th>Fonte de Dados (View)</th>
+                        <th>Regra de Negócio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Safra Combos</strong></td>
+                        <td><code>vw_safra_combos</code></td>
+                        <td>Placa com Avaliação + 1ª via da ECV registradas simultaneamente.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Safra 2ª VIA+</strong></td>
+                        <td><code>vw_safra_ecv_demais_vias</code></td>
+                        <td>Placas com mais de uma vistoria ECV (registros subsequentes).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Seção 3: Automações n8n -->
+    <section class="docs-section">
+        <h2>3. Automação de Relatórios Safra (n8n)</h2>
         <p>Solução para automatizar a coleta, tratamento e classificação de dados de vistorias para o Banco Safra, consolidando informações de sistemas legados e governamentais.</p>
 
         <h3>Ecossistema de Sistemas</h3>
@@ -252,9 +312,9 @@ $carvist_nav_active = 'docs';
 
         <h3>Fluxo de Dados (Workflow)</h3>
         <ul>
-            <li><strong>Etapa 1 (Ingestão):</strong> Daily Job às 07:00 AM. Coleta dados dos últimos 90 dias do VISTORIAGO para a tabela <code>APIGO</code>.</li>
-            <li><strong>Etapa 2 (Matriz):</strong> Filtra laudos pós 01/01/2026 e status "Finalizado". Extrai número do laudo ECV via link.</li>
-            <li><strong>Etapa 3 (Higienização):</strong> Loop por placa, ordenação cronológica e remoção de duplicidades (mantém o registro mais recente).</li>
+            <li><strong>Etapa 1 (Ingestão):</strong> Daily Job às 07:00 AM. Coleta dados do VISTORIAGO para a tabela <code>APIGO</code>.</li>
+            <li><strong>Etapa 2 (Matriz):</strong> Filtra laudos e status "Finalizado". Extrai número do laudo ECV via link.</li>
+            <li><strong>Etapa 3 (Higienização):</strong> Loop por placa, ordenação cronológica e remoção de duplicidades.</li>
         </ul>
 
         <h3>Mapa da Automação</h3>
@@ -264,28 +324,10 @@ $carvist_nav_active = 'docs';
             </a>
             <p style="font-size: 10px; color: #888; margin-top: 10px;">Clique no mapa para visualizar em tamanho real</p>
         </div>
-
-        <h3>Enriquecimento (Otmiza)</h3>
-        <p>Subworkflow que utiliza a API da Otmiza para identificar o pátio correto da ECV. Fallback automático para o nome do cliente caso a consulta falhe.</p>
-    </section>
-
-    <!-- Seção 3: Regras de Negócio -->
-    <section class="docs-section">
-        <h2>3. Regras de Saída Final</h2>
-        <div class="docs-grid">
-            <div class="docs-card">
-                <strong>Safra Combos</strong>
-                Placa com Avaliação + 1ª via da ECV registradas simultaneamente.
-            </div>
-            <div class="docs-card">
-                <strong>Safra Segunda Via</strong>
-                Placas com mais de uma vistoria ECV (registros subsequentes à primeira cronológica).
-            </div>
-        </div>
     </section>
 
     <footer class="docs-footer">
-        Sistema Carvist v1.0 | Gerado em <?php echo date('d/m/Y H:i'); ?>
+        Sistema Carvist v1.1 | Gerado em <?php echo date('d/m/Y H:i'); ?>
     </footer>
 </div>
 
