@@ -31,5 +31,7 @@ if (!empty($carvist_container_wide)) {
         <a href="index.php" class="nav-link<?php echo $navActive('matriz'); ?>">Matriz Safra</a>
         <a href="combos.php" class="nav-link<?php echo $navActive('combos'); ?>">Safra Combos</a>
         <a href="segunda_via.php" class="nav-link<?php echo $navActive('segunda_via'); ?>">Safra 2ª VIA+</a>
+        <a href="unidades.php" class="nav-link<?php echo $navActive('unidades'); ?>">Unidades de Negócio</a>
+        <a href="tabela_precos.php" class="nav-link<?php echo $navActive('precos'); ?>">Tabela de Preços</a>
         <a href="docs.php" class="nav-link<?php echo $navActive('docs'); ?>">Documentação</a>
     </nav>

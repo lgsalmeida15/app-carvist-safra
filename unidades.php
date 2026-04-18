@@ -3,7 +3,35 @@ require_once 'config.php';
 
 // --- LÓGICA DE SALVAMENTO (POST) ---
 $update_msg = '';
-// Lógica de salvamento removida pois a página agora é apenas para visualização de uma VIEW.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_changes') {
+    $selected_rows = $_POST['selected_rows'] ?? [];
+    
+    if (!empty($selected_rows)) {
+        try {
+            $pdo->beginTransaction();
+            
+            $sql_update = "UPDATE unidade_negocio_apigo SET ativo = :ativo, cliente = :cliente, unidade_negocio = :unidade_negocio WHERE numero = :numero";
+            $stmt_update = $pdo->prepare($sql_update);
+            
+            foreach ($selected_rows as $numero) {
+                $stmt_update->execute([
+                    'ativo' => $_POST['ativo'][$numero] ?? '',
+                    'cliente' => $_POST['cliente'][$numero] ?? '',
+                    'unidade_negocio' => $_POST['unidade_negocio'][$numero] ?? '',
+                    'numero' => $numero
+                ]);
+            }
+            
+            $pdo->commit();
+            $update_msg = "Sucesso: " . count($selected_rows) . " registros atualizados.";
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error_msg = "Erro ao salvar: " . $e->getMessage();
+        }
+    } else {
+        $update_msg = "Nenhum registro selecionado para salvar.";
+    }
+}
 
 // --- LÓGICA DE BUSCA (GET) ---
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] === '1';
@@ -12,31 +40,26 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
-$placa_filter = isset($_GET['placa']) ? strtoupper(trim($_GET['placa'])) : '';
-$status_filter = isset($_GET['status_envio']) ? trim($_GET['status_envio']) : '';
+$cliente_filter = isset($_GET['cliente']) ? trim($_GET['cliente']) : '';
+$unidade_filter = isset($_GET['unidade_negocio']) ? trim($_GET['unidade_negocio']) : '';
 
 $where = ["1=1"];
 $params = [];
 
-if ($placa_filter !== '') {
-    if (strlen($placa_filter) === 7) {
-        $where[] = "placa = :placa";
-        $params['placa'] = $placa_filter;
-    } else {
-        $where[] = "placa ILIKE :placa";
-        $params['placa'] = "%$placa_filter%";
-    }
+if ($cliente_filter !== '') {
+    $where[] = "cliente ILIKE :cliente";
+    $params['cliente'] = "%$cliente_filter%";
 }
 
-if ($status_filter !== '') {
-    $where[] = "status_envio = :status_envio";
-    $params['status_envio'] = $status_filter;
+if ($unidade_filter !== '') {
+    $where[] = "unidade_negocio ILIKE :unidade_negocio";
+    $params['unidade_negocio'] = "%$unidade_filter%";
 }
 
 $where_clause = implode(' AND ', $where);
 
 try {
-    $count_sql = "SELECT COUNT(*) FROM vw_safra_combos WHERE $where_clause";
+    $count_sql = "SELECT COUNT(*) FROM unidade_negocio_apigo WHERE $where_clause";
     $stmt_count = $pdo->prepare($count_sql);
     $stmt_count->execute($params);
     $total_records = $stmt_count->fetchColumn();
@@ -49,7 +72,7 @@ try {
 $data = [];
 if (!isset($error_msg)) {
     try {
-        $sql = "SELECT * FROM vw_safra_combos WHERE $where_clause ORDER BY data DESC, placa ASC LIMIT $limit OFFSET $offset";
+        $sql = "SELECT * FROM unidade_negocio_apigo WHERE $where_clause ORDER BY numero DESC LIMIT $limit OFFSET $offset";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $data = $stmt->fetchAll();
@@ -57,12 +80,6 @@ if (!isset($error_msg)) {
         $error_msg = "Erro ao buscar dados: " . $e->getMessage();
     }
 }
-
-// Busca status distintos para o select
-$status_list = [];
-try {
-    $status_list = $pdo->query("SELECT DISTINCT status_envio FROM vw_safra_combos WHERE status_envio IS NOT NULL ORDER BY status_envio")->fetchAll(PDO::FETCH_COLUMN);
-} catch (Exception $e) {}
 
 // --- RESPOSTA AJAX ---
 if ($is_ajax) {
@@ -73,51 +90,29 @@ if ($is_ajax) {
         <table>
             <thead>
                 <tr>
-                    <th>Placa</th>
-                    <th>Data</th>
-                    <th>Patio</th>
-                    <th>Valor</th>
-                    <th>Serviço</th>
-                    <th>Status Envio</th>
-                    <th>Nº Laudo</th>
-                    <th>Links</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Ano</th>
-                    <th>Cor</th>
-                    <th>UF</th>
-                    <th>Chassi</th>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Número</th>
+                    <th>Ativo (Editável)</th>
+                    <th>Cliente (Editável)</th>
+                    <th>Unidade de Negócio (Editável)</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($data)): ?>
-                    <tr><td colspan="14" style="text-align: center;">Nenhum registro encontrado.</td></tr>
+                    <tr><td colspan="5" style="text-align: center;">Nenhum registro encontrado.</td></tr>
                 <?php else: ?>
                     <?php foreach ($data as $row): ?>
-                        <tr id="row-<?php echo $row['placa']; ?>">
-                            <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
-                            <td><?php echo ($row['data'] ?? '') ? date('d/m/Y', strtotime($row['data'])) : '-'; ?></td>
-                            <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
-                            <td>R$ <?php echo number_format((float)($row['valor_preco'] ?? 0), 2, ',', '.'); ?></td>
-                            <td><small><?php echo htmlspecialchars($row['servico'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
+                        <tr id="row-<?php echo $row['numero']; ?>">
+                            <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['numero']; ?>" class="row-checkbox"></td>
+                            <td><?php echo htmlspecialchars($row['numero'] ?? ''); ?></td>
                             <td>
-                                    <?php 
-                                        $link_ecv = $row['link_ecv'] ?? '';
-                                        $url_ecv = (strpos($link_ecv, 'vistoriago.com.br') !== false) ? $link_ecv : "https://www.vistoriago.com.br/" . $link_ecv;
-                                        if ($link_ecv): 
-                                    ?>
-                                        <a href="<?php echo htmlspecialchars($url_ecv); ?>" target="_blank" class="link-btn">ECV</a>
-                                    <?php endif; ?>
-                                <?php if ($row['link_avaliacao'] ?? ''): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao'] ?? ''); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
+                                <select name="ativo[<?php echo $row['numero']; ?>]" class="edit-input data-input">
+                                    <option value="ATIVO" <?php echo ($row['ativo'] ?? '') === 'ATIVO' ? 'selected' : ''; ?>>ATIVO</option>
+                                    <option value="INATIVO" <?php echo ($row['ativo'] ?? '') === 'INATIVO' ? 'selected' : ''; ?>>INATIVO</option>
+                                </select>
                             </td>
-                            <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
+                            <td><input type="text" name="cliente[<?php echo $row['numero']; ?>]" value="<?php echo htmlspecialchars($row['cliente'] ?? ''); ?>" class="edit-input data-input"></td>
+                            <td><input type="text" name="unidade_negocio[<?php echo $row['numero']; ?>]" value="<?php echo htmlspecialchars($row['unidade_negocio'] ?? ''); ?>" class="edit-input data-input"></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -125,15 +120,6 @@ if ($is_ajax) {
         </table>
     </div>
 
-    <div class="pagination">
-        <?php if ($page > 1): ?>
-            <a href="javascript:void(0)" onclick="changePage(<?php echo $page - 1; ?>)" class="btn btn-secondary">Anterior</a>
-        <?php endif; ?>
-        <span>Página <strong><?php echo $page; ?></strong> de <?php echo max(1, $total_pages); ?></span>
-        <?php if ($page < $total_pages): ?>
-            <a href="javascript:void(0)" onclick="changePage(<?php echo $page + 1; ?>)" class="btn btn-secondary">Próxima</a>
-        <?php endif; ?>
-    </div>
     <?php
     $html = ob_get_clean();
     echo json_encode([
@@ -150,7 +136,7 @@ if ($is_ajax) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safra Combos - Listagem</title>
+    <title>Unidades de Negócio - Listagem</title>
     <link rel="stylesheet" href="includes/app-shell.css">
     <style>
         :root {
@@ -178,7 +164,7 @@ if ($is_ajax) {
         .btn-secondary { background: #95a5a6; color: white; text-decoration: none; }
         button:hover { opacity: 0.8; }
         .table-responsive { overflow-x: auto; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th { background-color: var(--thead-bg); color: var(--thead-text); text-align: left; padding: 10px; position: sticky; top: 0; z-index: 10; }
         td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
         tr:nth-child(even) { background-color: var(--row-even); }
@@ -186,7 +172,6 @@ if ($is_ajax) {
         .edit-input { width: 100%; box-sizing: border-box; }
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
         
-        /* Tarjas Animadas */
         .tarja-animada {
             padding: 5px 15px;
             border-radius: 20px;
@@ -208,13 +193,11 @@ if ($is_ajax) {
         .banner { padding: 12px; border-radius: 4px; margin-bottom: 15px; border: 1px solid transparent; display: flex; align-items: center; gap: 10px; }
         .error-banner { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
         .success-banner { background: #d4edda; color: #155724; border-color: #c3e6cb; }
-
-        .link-btn { display: inline-block; padding: 4px 8px; background: var(--primary-color); color: white; border-radius: 4px; text-decoration: none; font-size: 10px; }
     </style>
 </head>
 <body>
 <?php
-$carvist_nav_active = 'combos';
+$carvist_nav_active = 'unidades';
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -229,31 +212,30 @@ require __DIR__ . '/includes/header.php';
         <form id="filterForm" method="GET">
             <div class="filter-grid">
                 <div class="filter-group">
-                    <label for="placa">Placa</label>
-                    <input type="text" name="placa" id="placa" value="<?php echo htmlspecialchars($placa_filter); ?>" placeholder="ABC1234">
+                    <label for="cliente">Cliente</label>
+                    <input type="text" name="cliente" id="cliente" value="<?php echo htmlspecialchars($cliente_filter); ?>" placeholder="Buscar cliente...">
                 </div>
                 <div class="filter-group">
-                    <label for="status_envio">Status Envio</label>
-                    <select name="status_envio" id="status_envio">
-                        <option value="">Todos</option>
-                        <?php foreach ($status_list as $s): ?>
-                            <option value="<?php echo htmlspecialchars($s); ?>" <?php echo $status_filter === $s ? 'selected' : ''; ?>><?php echo htmlspecialchars($s); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label for="unidade_negocio">Unidade de Negócio</label>
+                    <input type="text" name="unidade_negocio" id="unidade_negocio" value="<?php echo htmlspecialchars($unidade_filter); ?>" placeholder="Buscar unidade...">
                 </div>
                 <div class="btn-group">
-                    <button type="submit" class="btn-primary">Filtrar</button>
-                    <a href="combos.php" class="btn btn-clear">Limpar</a>
-                    <button type="button" id="btnExport" class="btn-secondary" style="background: #27ae60;">Exportar CSV</button>
+                    <a href="unidades.php" class="btn btn-clear">Limpar</a>
+                    <small style="color: #888; margin-left: 10px;"><i>O filtro é aplicado automaticamente ao digitar.</i></small>
                 </div>
             </div>
         </form>
     </section>
 
     <form id="saveForm" method="POST">
+        <input type="hidden" name="action" value="save_changes">
+        
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div class="stats">
-                Encontrados: <strong id="totalRecordsDisplay"><?php echo $total_records; ?></strong>
+                Encontrados: <strong id="totalRecordsDisplay"><?php echo $total_records; ?></strong> | <span id="selectedCount">0</span> selecionados
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn-success" id="btnSave" disabled>Salvar Alterações</button>
             </div>
         </div>
 
@@ -262,56 +244,35 @@ require __DIR__ . '/includes/header.php';
             <table>
                 <thead>
                     <tr>
-                        <th>Placa</th>
-                        <th>Data</th>
-                        <th>Patio</th>
-                        <th>Valor</th>
-                        <th>Serviço</th>
-                        <th>Status Envio</th>
-                        <th>Nº Laudo</th>
-                        <th>Links</th>
-                        <th>Marca</th>
-                        <th>Modelo</th>
-                        <th>Ano</th>
-                        <th>Cor</th>
-                        <th>UF</th>
-                        <th>Chassi</th>
+                        <th><input type="checkbox" id="selectAll"></th>
+                        <th>Número</th>
+                        <th>Ativo (Editável)</th>
+                        <th>Cliente (Editável)</th>
+                        <th>Unidade de Negócio (Editável)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($data)): ?>
-                        <tr><td colspan="14" style="text-align: center;">Nenhum registro encontrado.</td></tr>
+                        <tr><td colspan="5" style="text-align: center;">Nenhum registro encontrado.</td></tr>
                     <?php else: ?>
                         <?php foreach ($data as $row): ?>
-                            <tr id="row-<?php echo $row['placa']; ?>">
-                                <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
-                                <td><?php echo ($row['data'] ?? '') ? date('d/m/Y', strtotime($row['data'])) : '-'; ?></td>
-                                <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
-                                <td>R$ <?php echo number_format((float)($row['valor_preco'] ?? 0), 2, ',', '.'); ?></td>
-                                <td><small><?php echo htmlspecialchars($row['servico'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
+                            <tr id="row-<?php echo $row['numero']; ?>">
+                                <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['numero']; ?>" class="row-checkbox"></td>
+                                <td><?php echo htmlspecialchars($row['numero'] ?? ''); ?></td>
                                 <td>
-                                    <?php 
-                                        $link_ecv = $row['link_ecv'] ?? '';
-                                        $url_ecv = (strpos($link_ecv, 'vistoriago.com.br') !== false) ? $link_ecv : "https://www.vistoriago.com.br/" . $link_ecv;
-                                        if ($link_ecv): 
-                                    ?>
-                                        <a href="<?php echo htmlspecialchars($url_ecv); ?>" target="_blank" class="link-btn">ECV</a>
-                                    <?php endif; ?>
-                                    <?php if ($row['link_avaliacao'] ?? ''): ?><a href="<?php echo htmlspecialchars($row['link_avaliacao'] ?? ''); ?>" target="_blank" class="link-btn" style="background:#e67e22">AVAL</a><?php endif; ?>
+                                    <select name="ativo[<?php echo $row['numero']; ?>]" class="edit-input data-input">
+                                        <option value="ATIVO" <?php echo ($row['ativo'] ?? '') === 'ATIVO' ? 'selected' : ''; ?>>ATIVO</option>
+                                        <option value="INATIVO" <?php echo ($row['ativo'] ?? '') === 'INATIVO' ? 'selected' : ''; ?>>INATIVO</option>
+                                    </select>
                                 </td>
-                                <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
+                                <td><input type="text" name="cliente[<?php echo $row['numero']; ?>]" value="<?php echo htmlspecialchars($row['cliente'] ?? ''); ?>" class="edit-input data-input"></td>
+                                <td><input type="text" name="unidade_negocio[<?php echo $row['numero']; ?>]" value="<?php echo htmlspecialchars($row['unidade_negocio'] ?? ''); ?>" class="edit-input data-input"></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
+            </div>
         </div>
     </form>
 
@@ -343,13 +304,43 @@ require __DIR__ . '/includes/header.php';
     const tableContainer = document.getElementById('tableContainer');
     const paginationContainer = document.getElementById('paginationContainer');
     const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
+    const btnSave = document.getElementById('btnSave');
+    const selectedCountSpan = document.getElementById('selectedCount');
 
     function initTableEvents() {
-        // Eventos de seleção removidos pois a página agora é apenas para visualização.
+        const selectAll = document.getElementById('selectAll');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+                updateUI();
+            });
+        }
+
+        rowCheckboxes.forEach(cb => cb.addEventListener('change', updateUI));
+
+        const dataInputs = document.querySelectorAll('.data-input');
+        dataInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const row = e.target.closest('tr');
+                const checkbox = row.querySelector('.row-checkbox');
+                checkbox.checked = true;
+                updateUI();
+            });
+        });
     }
 
     function updateUI() {
-        // UI de seleção removida.
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const selected = document.querySelectorAll('.row-checkbox:checked');
+        selectedCountSpan.textContent = selected.length;
+        btnSave.disabled = selected.length === 0;
+        rowCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            if (cb.checked) row.classList.add('selected');
+            else row.classList.remove('selected');
+        });
     }
 
     initTableEvents();
@@ -366,12 +357,14 @@ require __DIR__ . '/includes/header.php';
 
         showLoading('Carregando dados...');
 
-        fetch('combos.php?' + params.toString())
+        fetch('unidades.php?' + params.toString())
             .then(response => response.json())
             .then(data => {
                 tableContainer.innerHTML = data.html;
+                paginationContainer.innerHTML = '';
                 totalRecordsDisplay.textContent = data.total_records;
                 initTableEvents();
+                updateUI();
                 hideLoading();
             })
             .catch(error => {
@@ -385,12 +378,14 @@ require __DIR__ . '/includes/header.php';
         loadData(page);
     }
 
-    // Debounce na busca por placa
-    document.getElementById('placa').addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            loadData(1);
-        }, 500);
+    // Debounce na busca
+    ['cliente', 'unidade_negocio'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadData(1);
+            }, 500);
+        });
     });
 
     filterForm.addEventListener('submit', (e) => {
@@ -404,24 +399,14 @@ require __DIR__ . '/includes/header.php';
 
     function showLoading(text = 'Processando...') {
         if (loadingText) loadingText.textContent = text;
-        if (loadingOverlay) loadingOverlay.style.display = 'flex';
+        loadingOverlay.style.display = 'flex';
     }
 
     function hideLoading() {
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        loadingOverlay.style.display = 'none';
     }
 
-    // Lógica de Exportação
-    document.getElementById('btnExport').addEventListener('click', () => {
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
-        const params = new URLSearchParams(formData);
-        params.append('table', 'vw_safra_combos');
-        
-        showLoading('Preparando exportação...');
-        window.location.href = 'export.php?' + params.toString();
-        setTimeout(hideLoading, 2000);
-    });
+    document.getElementById('saveForm').addEventListener('submit', () => showLoading('Gravando no banco...'));
 </script>
 
 </body>

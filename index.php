@@ -12,10 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             
             // Prepared statements para otimização e segurança
             $sql_update = "UPDATE matriz_safra 
-                           SET via_ecv = :via_ecv, 
+                           SET via_laudo = :via_laudo, 
                                valor = :valor, 
                                servico = :servico, 
-                               enviada_ao_banco = true,
+                               rel = :rel,
+                               uf_vistoriador = :uf_vistoriador,
+                               enviada_ao_banco = :enviada,
                                alterada = CASE WHEN :has_changed = '1' THEN 'MANUAL' ELSE alterada END,
                                ultima_atualizacao = NOW()
                            WHERE id = :id";
@@ -23,15 +25,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             
             foreach ($selected_ids as $id) {
                 $id = (int)$id;
-                $via_ecv = $_POST['via_ecv'][$id] ?? '';
+                $via_laudo = $_POST['via_laudo'][$id] ?? '';
                 $valor = $_POST['valor'][$id] ?? 0;
                 $servico_edit = $_POST['servico_edit'][$id] ?? '';
+                $rel_edit = $_POST['rel_edit'][$id] ?? '';
+                $uf_vistoriador = strtoupper(substr(trim($_POST['uf_vistoriador'][$id] ?? ''), 0, 2));
+                $enviada_edit = ($_POST['enviada_edit'][$id] ?? '0') === '1';
                 $has_changed = $_POST['changed'][$id] ?? '0'; // Flag JS para detectar mudança
                 
                 $stmt_update->execute([
-                    'via_ecv' => $via_ecv,
+                    'via_laudo' => $via_laudo,
                     'valor' => str_replace(',', '.', $valor), // Garante formato decimal
                     'servico' => $servico_edit,
+                    'rel' => $rel_edit,
+                    'uf_vistoriador' => $uf_vistoriador,
+                    'enviada' => $enviada_edit ? 1 : 0,
                     'has_changed' => $has_changed,
                     'id' => $id
                 ]);
@@ -161,7 +169,7 @@ if ($is_ajax) {
                     <th>ID</th>
                     <th>Data Laudo</th>
                     <th>Placa</th>
-                    <th>Valor (Editável)</th>
+                    <th>UF Vistoriador</th>
                     <th>Serviço (Editável)</th>
                     <th>VIA ECV (Editável)</th>
                     <th>Enviada?</th>
@@ -194,9 +202,9 @@ if ($is_ajax) {
                             <td><?php echo $row['laudo_data'] ? date('d/m/Y', strtotime($row['laudo_data'])) : '-'; ?></td>
                             <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                             <td>
-                                <input type="text" name="valor[<?php echo $row['id']; ?>]" 
-                                       value="<?php echo number_format((float)($row['valor'] ?? 0), 2, '.', ''); ?>" 
-                                       class="edit-input edit-input-valor data-input">
+                                <input type="text" name="uf_vistoriador[<?php echo $row['id']; ?>]" 
+                                       value="<?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?>" 
+                                       class="edit-input data-input" style="width: 50px; text-transform: uppercase;" maxlength="2">
                             </td>
                             <td>
                                 <select name="servico_edit[<?php echo $row['id']; ?>]" class="edit-input data-input">
@@ -208,8 +216,8 @@ if ($is_ajax) {
                                 </select>
                             </td>
                             <td>
-                                <input type="text" name="via_ecv[<?php echo $row['id']; ?>]" 
-                                       value="<?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?>" 
+                                <input type="text" name="via_laudo[<?php echo $row['id']; ?>]" 
+                                       value="<?php echo htmlspecialchars($row['via_laudo'] ?? ''); ?>" 
                                        class="edit-input data-input">
                             </td>
                             <td>
@@ -351,6 +359,9 @@ if ($is_ajax) {
             gap: 10px; 
             align-items: center; 
             flex-wrap: wrap;
+        }
+
+        .filter-section .btn-group {
             grid-column: 1 / -1;
             margin-top: 10px;
             padding-top: 15px;
@@ -361,7 +372,7 @@ if ($is_ajax) {
             .filter-grid {
                 grid-template-columns: repeat(6, 1fr);
             }
-            .btn-group {
+            .filter-section .btn-group {
                 grid-column: span 6;
             }
         }
@@ -459,6 +470,33 @@ if ($is_ajax) {
         }
         .status-true { background: #d4edda; color: #155724; }
         .status-false { background: #f8d7da; color: #721c24; }
+        
+        /* Estilos para o select de Enviada */
+        .enviada-select {
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .enviada-select.status-yes {
+            background-color: #d4edda !important;
+            color: #155724 !important;
+            border-color: #c3e6cb;
+        }
+        .enviada-select.status-no {
+            background-color: #f8d7da !important;
+            color: #721c24 !important;
+            border-color: #f5c6cb;
+        }
+        [data-theme="dark"] .enviada-select.status-yes {
+            background-color: #1b4332 !important;
+            color: #d8f3dc !important;
+            border-color: #2d6a4f;
+        }
+        [data-theme="dark"] .enviada-select.status-no {
+            background-color: #4c1d1f !important;
+            color: #f8d7da !important;
+            border-color: #6a1d1f;
+        }
         .link-btn { display: inline-block; padding: 4px 8px; background: var(--primary-color); color: white; border-radius: 4px; text-decoration: none; font-size: 10px; }
         /* Estilos Select2 para Tema Dark */
         [data-theme="dark"] .select2-container--default .select2-selection--multiple {
@@ -563,12 +601,18 @@ require __DIR__ . '/includes/header.php';
     <form id="saveForm" method="POST" action="index.php">
         <input type="hidden" name="action" value="save_changes">
         
-        <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div class="stats">
                 Encontrados: <strong id="totalRecordsDisplay"><?php echo $total_records; ?></strong> | 
                 <span id="selectedCount">0</span> selecionados
             </div>
-            <button type="submit" class="btn-success" id="btnSave" disabled>Salvar Alterações Selecionadas</button>
+            <div class="action-buttons" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <input type="text" id="bulkRelValue" placeholder="Valor para REL" style="width: 150px; padding: 6px; height: 32px;">
+                    <button type="button" class="btn-primary" id="btnApplyBulk" style="padding: 6px 12px; height: 32px;">Aplicar</button>
+                </div>
+                <button type="submit" class="btn-success" id="btnSave" disabled style="padding: 6px 15px; height: 32px;">Salvar Alterações Selecionadas</button>
+            </div>
         </div>
 
         <div id="tableContainer">
@@ -585,9 +629,9 @@ require __DIR__ . '/includes/header.php';
                         <th>ID</th>
                         <th>Data Laudo</th>
                         <th>Placa</th>
-                        <th>Valor (Editável)</th>
+                        <th>UF Vistoriador</th>
                         <th>Serviço (Editável)</th>
-                        <th>VIA ECV (Editável)</th>
+                        <th>VIA(Editável)</th>
                         <th>Enviada?</th>
                         <th>Rel</th>
                         <th>Status</th>
@@ -618,9 +662,9 @@ require __DIR__ . '/includes/header.php';
                                 <td><?php echo $row['laudo_data'] ? date('d/m/Y', strtotime($row['laudo_data'])) : '-'; ?></td>
                                 <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                                 <td>
-                                    <input type="text" name="valor[<?php echo $row['id']; ?>]" 
-                                           value="<?php echo number_format((float)($row['valor'] ?? 0), 2, '.', ''); ?>" 
-                                           class="edit-input edit-input-valor data-input">
+                                    <input type="text" name="uf_vistoriador[<?php echo $row['id']; ?>]" 
+                                           value="<?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?>" 
+                                           class="edit-input data-input" style="width: 50px; text-transform: uppercase;" maxlength="2">
                                 </td>
                                 <td>
                                     <select name="servico_edit[<?php echo $row['id']; ?>]" class="edit-input data-input">
@@ -632,16 +676,26 @@ require __DIR__ . '/includes/header.php';
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="text" name="via_ecv[<?php echo $row['id']; ?>]" 
-                                           value="<?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?>" 
+                                    <input type="text" name="via_laudo[<?php echo $row['id']; ?>]" 
+                                           value="<?php echo htmlspecialchars($row['via_laudo'] ?? ''); ?>" 
                                            class="edit-input data-input">
                                 </td>
                                 <td>
-                                    <span class="status-badge status-<?php echo ($row['enviada_ao_banco'] ?? false) ? 'true' : 'false'; ?>">
-                                        <?php echo ($row['enviada_ao_banco'] ?? false) ? 'SIM' : 'NÃO'; ?>
-                                    </span>
+                                    <?php $is_enviada = ($row['enviada_ao_banco'] ?? false); ?>
+                                    <select name="enviada_edit[<?php echo $row['id']; ?>]" 
+                                            class="edit-input data-input enviada-select <?php echo $is_enviada ? 'status-yes' : 'status-no'; ?>" 
+                                            data-original="<?php echo $is_enviada ? '1' : '0'; ?>" 
+                                            style="font-size: 10px; padding: 2px;"
+                                            onchange="this.classList.remove('status-yes', 'status-no'); this.classList.add(this.value === '1' ? 'status-yes' : 'status-no');">
+                                        <option value="1" <?php echo $is_enviada ? 'selected' : ''; ?>>SIM</option>
+                                        <option value="0" <?php echo !$is_enviada ? 'selected' : ''; ?>>NÃO</option>
+                                    </select>
                                 </td>
-                                <td><small><?php echo htmlspecialchars($row['rel'] ?? ''); ?></small></td>
+                                <td>
+                                    <input type="text" name="rel_edit[<?php echo $row['id']; ?>]" 
+                                           value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" 
+                                           class="edit-input rel-input data-input">
+                                </td>
                                 <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
@@ -818,6 +872,24 @@ require __DIR__ . '/includes/header.php';
         loadData(1);
     });
 
+    // Edição em Massa para campo REL
+    document.getElementById('btnApplyBulk').addEventListener('click', () => {
+        const val = document.getElementById('bulkRelValue').value;
+        if (!val) { alert('Digite um valor para aplicar.'); return; }
+        const selected = document.querySelectorAll('.row-checkbox:checked');
+        if (selected.length === 0) { alert('Selecione ao menos uma linha.'); return; }
+        
+        selected.forEach(cb => {
+            const row = cb.closest('tr');
+            const relInput = row.querySelector('.rel-input');
+            if (relInput) {
+                relInput.value = val;
+                // Disparar evento change para marcar como alterado
+                relInput.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
     // Loader e Overlay
     const loadingOverlay = document.getElementById('loadingOverlay');
     const loadingText = document.getElementById('loadingText');
@@ -832,7 +904,36 @@ require __DIR__ . '/includes/header.php';
     }
 
     // Loader no formulário de salvamento
-    document.getElementById('saveForm').addEventListener('submit', () => {
+    document.getElementById('saveForm').addEventListener('submit', (e) => {
+        const selects = document.querySelectorAll('.enviada-select');
+        let changedToNo = false;
+        let changedToYes = false;
+
+        selects.forEach(sel => {
+            const row = sel.closest('tr');
+            const checkbox = row.querySelector('.row-checkbox');
+            if (checkbox && checkbox.checked) {
+                const original = sel.getAttribute('data-original');
+                const current = sel.value;
+                if (original !== current) {
+                    if (current === '0') changedToNo = true;
+                    if (current === '1') changedToYes = true;
+                }
+            }
+        });
+
+        if (changedToNo || changedToYes) {
+            let msg = "Você alterou o status 'Enviada?' de alguns registros.\n\n";
+            if (changedToNo) msg += "- Alguns registros serão marcados como NÃO ENVIADOS.\n";
+            if (changedToYes) msg += "- Alguns registros serão marcados como ENVIADOS.\n";
+            msg += "\nDeseja continuar?";
+            
+            if (!confirm(msg)) {
+                e.preventDefault();
+                return;
+            }
+        }
+
         showLoading('Gravando no banco...');
     });
 
