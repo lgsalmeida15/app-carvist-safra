@@ -14,6 +14,8 @@ $offset = ($page - 1) * $limit;
 
 $placa_filter = isset($_GET['placa']) ? strtoupper(trim($_GET['placa'])) : '';
 $status_filter = isset($_GET['status_envio']) ? trim($_GET['status_envio']) : '';
+$data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
+$data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
 
 $where = ["1=1"];
 $params = [];
@@ -31,6 +33,16 @@ if ($placa_filter !== '') {
 if ($status_filter !== '') {
     $where[] = "status_envio = :status_envio";
     $params['status_envio'] = $status_filter;
+}
+
+if ($data_inicio !== '') {
+    $where[] = "data >= :data_inicio";
+    $params['data_inicio'] = $data_inicio;
+}
+
+if ($data_fim !== '') {
+    $where[] = "data <= :data_fim";
+    $params['data_fim'] = $data_fim;
 }
 
 $where_clause = implode(' AND ', $where);
@@ -241,6 +253,14 @@ require __DIR__ . '/includes/header.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="data_inicio">Data Início</label>
+                    <input type="date" name="data_inicio" id="data_inicio" value="<?php echo htmlspecialchars($data_inicio); ?>">
+                </div>
+                <div class="filter-group">
+                    <label for="data_fim">Data Fim</label>
+                    <input type="date" name="data_fim" id="data_fim" value="<?php echo htmlspecialchars($data_fim); ?>">
+                </div>
                 <div class="btn-group">
                     <button type="submit" class="btn-primary">Filtrar</button>
                     <a href="combos.php" class="btn btn-clear">Limpar</a>
@@ -392,6 +412,10 @@ require __DIR__ . '/includes/header.php';
             loadData(1);
         }, 500);
     });
+
+    document.getElementById('data_inicio').addEventListener('change', () => loadData(1));
+    document.getElementById('data_fim').addEventListener('change', () => loadData(1));
+    document.getElementById('status_envio').addEventListener('change', () => loadData(1));
 
     filterForm.addEventListener('submit', (e) => {
         e.preventDefault();

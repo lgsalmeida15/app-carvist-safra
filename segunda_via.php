@@ -3,34 +3,7 @@ require_once 'config.php';
 
 // --- LÓGICA DE SALVAMENTO (POST) ---
 $update_msg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_changes') {
-    $selected_rows = $_POST['selected_rows'] ?? [];
-    
-    if (!empty($selected_rows)) {
-        try {
-            $pdo->beginTransaction();
-            
-            $sql_update = "UPDATE safra_segunda_via SET rel = :rel WHERE id_laudo = :id_laudo";
-            $stmt_update = $pdo->prepare($sql_update);
-            
-            foreach ($selected_rows as $id_laudo) {
-                $rel_value = $_POST['rel'][$id_laudo] ?? '';
-                $stmt_update->execute([
-                    'rel' => $rel_value,
-                    'id_laudo' => $id_laudo
-                ]);
-            }
-            
-            $pdo->commit();
-            $update_msg = "Sucesso: " . count($selected_rows) . " registros atualizados.";
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error_msg = "Erro ao salvar: " . $e->getMessage();
-        }
-    } else {
-        $update_msg = "Nenhum registro selecionado para salvar.";
-    }
-}
+// Lógica de salvamento removida pois a página agora é apenas para visualização de uma VIEW.
 
 // --- LÓGICA DE BUSCA (GET) ---
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] === '1';
@@ -41,6 +14,8 @@ $offset = ($page - 1) * $limit;
 
 $placa_filter = isset($_GET['placa']) ? strtoupper(trim($_GET['placa'])) : '';
 $status_filter = isset($_GET['status_envio']) ? trim($_GET['status_envio']) : '';
+$data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
+$data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
 
 $where = ["1=1"];
 $params = [];
@@ -60,10 +35,20 @@ if ($status_filter !== '') {
     $params['status_envio'] = $status_filter;
 }
 
+if ($data_inicio !== '') {
+    $where[] = "data >= :data_inicio";
+    $params['data_inicio'] = $data_inicio;
+}
+
+if ($data_fim !== '') {
+    $where[] = "data <= :data_fim";
+    $params['data_fim'] = $data_fim;
+}
+
 $where_clause = implode(' AND ', $where);
 
 try {
-    $count_sql = "SELECT COUNT(*) FROM safra_segunda_via WHERE $where_clause";
+    $count_sql = "SELECT COUNT(*) FROM vw_safra_ecv_demais_vias WHERE $where_clause";
     $stmt_count = $pdo->prepare($count_sql);
     $stmt_count->execute($params);
     $total_records = $stmt_count->fetchColumn();
@@ -76,7 +61,7 @@ try {
 $data = [];
 if (!isset($error_msg)) {
     try {
-        $sql = "SELECT * FROM safra_segunda_via WHERE $where_clause ORDER BY id_laudo DESC LIMIT $limit OFFSET $offset";
+        $sql = "SELECT * FROM vw_safra_ecv_demais_vias WHERE $where_clause ORDER BY id_laudo DESC LIMIT $limit OFFSET $offset";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $data = $stmt->fetchAll();
@@ -88,7 +73,7 @@ if (!isset($error_msg)) {
 // Busca status distintos para o select
 $status_list = [];
 try {
-    $status_list = $pdo->query("SELECT DISTINCT status_envio FROM safra_segunda_via WHERE status_envio IS NOT NULL ORDER BY status_envio")->fetchAll(PDO::FETCH_COLUMN);
+    $status_list = $pdo->query("SELECT DISTINCT status_envio FROM vw_safra_ecv_demais_vias WHERE status_envio IS NOT NULL ORDER BY status_envio")->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {}
 
 // --- RESPOSTA AJAX ---
@@ -100,11 +85,10 @@ if ($is_ajax) {
         <table>
             <thead>
                 <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th>Via ECV</th>
+                    <th>Data</th>
+                    <th>Via Laudo</th>
                     <th>Placa</th>
                     <th>ID Laudo</th>
-                    <th>REL (Editável)</th>
                     <th>Valor</th>
                     <th>Tipo Laudo</th>
                     <th>Nº Laudo</th>
@@ -115,7 +99,6 @@ if ($is_ajax) {
                     <th>Modelo</th>
                     <th>Ano</th>
                     <th>Cor</th>
-                    <th>Cidade</th>
                     <th>UF</th>
                     <th>Chassi</th>
                 </tr>
@@ -126,12 +109,11 @@ if ($is_ajax) {
                 <?php else: ?>
                     <?php foreach ($data as $row): ?>
                         <tr id="row-<?php echo $row['id_laudo']; ?>">
-                            <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
-                            <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
+                            <td><?php echo ($row['data'] ?? '') ? date('d/m/Y', strtotime($row['data'])) : '-'; ?></td>
+                            <td><small><?php echo htmlspecialchars($row['via_laudo'] ?? ''); ?></small></td>
                             <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                             <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
-                            <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input data-input"></td>
-                            <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
+                            <td>R$ <?php echo number_format((float)($row['valor_preco'] ?? 0), 2, ',', '.'); ?></td>
                             <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
@@ -149,8 +131,7 @@ if ($is_ajax) {
                             <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
-                            <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
+                            <td><small><?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
                         </tr>
                     <?php endforeach; ?>
@@ -275,6 +256,14 @@ require __DIR__ . '/includes/header.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <label for="data_inicio">Data Início</label>
+                    <input type="date" name="data_inicio" id="data_inicio" value="<?php echo htmlspecialchars($data_inicio); ?>">
+                </div>
+                <div class="filter-group">
+                    <label for="data_fim">Data Fim</label>
+                    <input type="date" name="data_fim" id="data_fim" value="<?php echo htmlspecialchars($data_fim); ?>">
+                </div>
                 <div class="btn-group">
                     <button type="submit" class="btn-primary">Filtrar</button>
                     <a href="segunda_via.php" class="btn btn-clear">Limpar</a>
@@ -285,16 +274,9 @@ require __DIR__ . '/includes/header.php';
     </section>
 
     <form id="saveForm" method="POST">
-        <input type="hidden" name="action" value="save_changes">
-        
         <div class="action-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div class="stats">
-                Encontrados: <strong id="totalRecordsDisplay"><?php echo $total_records; ?></strong> | <span id="selectedCount">0</span> selecionados
-            </div>
-            <div class="btn-group">
-                <input type="text" id="bulkRelValue" placeholder="Valor para REL" style="width: 150px;">
-                <button type="button" class="btn-primary" id="btnApplyBulk">Aplicar a Selecionados</button>
-                <button type="submit" class="btn-success" id="btnSave" disabled>Salvar Alterações</button>
+                Encontrados: <strong id="totalRecordsDisplay"><?php echo $total_records; ?></strong>
             </div>
         </div>
 
@@ -303,11 +285,10 @@ require __DIR__ . '/includes/header.php';
             <table>
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="selectAll"></th>
-                        <th>Via ECV</th>
+                        <th>Data</th>
+                        <th>Via Laudo</th>
                         <th>Placa</th>
                         <th>ID Laudo</th>
-                        <th>REL (Editável)</th>
                         <th>Valor</th>
                         <th>Tipo Laudo</th>
                         <th>Nº Laudo</th>
@@ -318,7 +299,6 @@ require __DIR__ . '/includes/header.php';
                         <th>Modelo</th>
                         <th>Ano</th>
                         <th>Cor</th>
-                        <th>Cidade</th>
                         <th>UF</th>
                         <th>Chassi</th>
                     </tr>
@@ -329,12 +309,11 @@ require __DIR__ . '/includes/header.php';
                     <?php else: ?>
                         <?php foreach ($data as $row): ?>
                             <tr id="row-<?php echo $row['id_laudo']; ?>">
-                                <td><input type="checkbox" name="selected_rows[]" value="<?php echo $row['id_laudo']; ?>" class="row-checkbox"></td>
-                                <td><small><?php echo htmlspecialchars($row['via_ecv'] ?? ''); ?></small></td>
+                                <td><?php echo ($row['data'] ?? '') ? date('d/m/Y', strtotime($row['data'])) : '-'; ?></td>
+                                <td><small><?php echo htmlspecialchars($row['via_laudo'] ?? ''); ?></small></td>
                                 <td><strong><?php echo htmlspecialchars($row['placa'] ?? ''); ?></strong></td>
                                 <td><small><?php echo htmlspecialchars($row['id_laudo'] ?? ''); ?></small></td>
-                                <td><input type="text" name="rel[<?php echo $row['id_laudo']; ?>]" value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" class="edit-input rel-input data-input"></td>
-                                <td>R$ <?php echo number_format((float)($row['valor'] ?? 0), 2, ',', '.'); ?></td>
+                                <td>R$ <?php echo number_format((float)($row['valor_preco'] ?? 0), 2, ',', '.'); ?></td>
                                 <td><small><?php echo htmlspecialchars($row['tipo_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['numero_laudo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['status_envio'] ?? ''); ?></small></td>
@@ -352,8 +331,7 @@ require __DIR__ . '/includes/header.php';
                                 <td><small><?php echo htmlspecialchars($row['modelo'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['ano'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['cor'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['cidade'] ?? ''); ?></small></td>
-                                <td><small><?php echo htmlspecialchars($row['uf'] ?? ''); ?></small></td>
+                                <td><small><?php echo htmlspecialchars($row['uf_vistoriador'] ?? ''); ?></small></td>
                                 <td><small><?php echo htmlspecialchars($row['chassi'] ?? ''); ?></small></td>
                             </tr>
                         <?php endforeach; ?>
@@ -391,43 +369,13 @@ require __DIR__ . '/includes/header.php';
     const tableContainer = document.getElementById('tableContainer');
     const paginationContainer = document.getElementById('paginationContainer');
     const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
-    const btnSave = document.getElementById('btnSave');
-    const selectedCountSpan = document.getElementById('selectedCount');
 
     function initTableEvents() {
-        const selectAll = document.getElementById('selectAll');
-        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-        
-        if (selectAll) {
-            selectAll.addEventListener('change', () => {
-                rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
-                updateUI();
-            });
-        }
-
-        rowCheckboxes.forEach(cb => cb.addEventListener('change', updateUI));
-
-        const dataInputs = document.querySelectorAll('.data-input');
-        dataInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                const row = e.target.closest('tr');
-                const checkbox = row.querySelector('.row-checkbox');
-                checkbox.checked = true;
-                updateUI();
-            });
-        });
+        // Eventos de seleção removidos pois a página agora é apenas para visualização.
     }
 
     function updateUI() {
-        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-        const selected = document.querySelectorAll('.row-checkbox:checked');
-        selectedCountSpan.textContent = selected.length;
-        btnSave.disabled = selected.length === 0;
-        rowCheckboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            if (cb.checked) row.classList.add('selected');
-            else row.classList.remove('selected');
-        });
+        // UI de seleção removida.
     }
 
     initTableEvents();
@@ -450,7 +398,6 @@ require __DIR__ . '/includes/header.php';
                 tableContainer.innerHTML = data.html;
                 totalRecordsDisplay.textContent = data.total_records;
                 initTableEvents();
-                updateUI();
                 hideLoading();
             })
             .catch(error => {
@@ -472,21 +419,13 @@ require __DIR__ . '/includes/header.php';
         }, 500);
     });
 
+    document.getElementById('data_inicio').addEventListener('change', () => loadData(1));
+    document.getElementById('data_fim').addEventListener('change', () => loadData(1));
+    document.getElementById('status_envio').addEventListener('change', () => loadData(1));
+
     filterForm.addEventListener('submit', (e) => {
         e.preventDefault();
         loadData(1);
-    });
-
-    // Edição em Massa
-    document.getElementById('btnApplyBulk').addEventListener('click', () => {
-        const val = document.getElementById('bulkRelValue').value;
-        if (!val) { alert('Digite um valor para aplicar.'); return; }
-        const selected = document.querySelectorAll('.row-checkbox:checked');
-        if (selected.length === 0) { alert('Selecione ao menos uma linha.'); return; }
-        selected.forEach(cb => {
-            const row = cb.closest('tr');
-            row.querySelector('.rel-input').value = val;
-        });
     });
 
     // Loader
@@ -495,21 +434,19 @@ require __DIR__ . '/includes/header.php';
 
     function showLoading(text = 'Processando...') {
         if (loadingText) loadingText.textContent = text;
-        loadingOverlay.style.display = 'flex';
+        if (loadingOverlay) loadingOverlay.style.display = 'flex';
     }
 
     function hideLoading() {
-        loadingOverlay.style.display = 'none';
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
     }
-
-    document.getElementById('saveForm').addEventListener('submit', () => showLoading('Gravando no banco...'));
 
     // Lógica de Exportação
     document.getElementById('btnExport').addEventListener('click', () => {
         const form = document.getElementById('filterForm');
         const formData = new FormData(form);
         const params = new URLSearchParams(formData);
-        params.append('table', 'safra_segunda_via');
+        params.append('table', 'vw_safra_ecv_demais_vias');
         
         showLoading('Preparando exportação...');
         window.location.href = 'export.php?' + params.toString();
