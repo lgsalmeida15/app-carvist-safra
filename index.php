@@ -70,6 +70,14 @@ $status_filter = isset($_GET['status']) ? (is_array($_GET['status']) ? $_GET['st
 $status_filter = array_filter($status_filter, function($v) { return $v !== ''; });
 
 $enviada = isset($_GET['enviada']) ? trim($_GET['enviada']) : '';
+$via_filter = isset($_GET['via_laudo_filter']) ? (is_array($_GET['via_laudo_filter']) ? $_GET['via_laudo_filter'] : [trim($_GET['via_laudo_filter'])]) : [];
+// Remove valores vazios do array de via
+$via_filter = array_filter($via_filter, function($v) { return $v !== ''; });
+
+$patio_filter = isset($_GET['patio_filter']) ? (is_array($_GET['patio_filter']) ? $_GET['patio_filter'] : [trim($_GET['patio_filter'])]) : [];
+// Remove valores vazios do array de patio
+$patio_filter = array_filter($patio_filter, function($v) { return $v !== ''; });
+
 $data_inicio = isset($_GET['data_inicio']) ? trim($_GET['data_inicio']) : '';
 $data_fim = isset($_GET['data_fim']) ? trim($_GET['data_fim']) : '';
 
@@ -106,6 +114,26 @@ if ($enviada === 'sim') {
     $where[] = "enviada_ao_banco = true";
 } elseif ($enviada === 'nao') {
     $where[] = "(enviada_ao_banco = false OR enviada_ao_banco IS NULL)";
+}
+
+if (!empty($via_filter)) {
+    $via_placeholders = [];
+    foreach ($via_filter as $i => $v) {
+        $key = "via_" . $i;
+        $via_placeholders[] = ":" . $key;
+        $params[$key] = $v;
+    }
+    $where[] = "via_laudo IN (" . implode(',', $via_placeholders) . ")";
+}
+
+if (!empty($patio_filter)) {
+    $patio_placeholders = [];
+    foreach ($patio_filter as $i => $p) {
+        $key = "patio_" . $i;
+        $patio_placeholders[] = ":" . $key;
+        $params[$key] = $p;
+    }
+    $where[] = "patio IN (" . implode(',', $patio_placeholders) . ")";
 }
 
 if ($data_inicio !== '') {
@@ -146,9 +174,13 @@ if (!isset($error_msg)) {
 
 $servicos_list = [];
 $status_list = [];
+$vias_list = [];
+$patios_list = [];
 try {
     $servicos_list = $pdo->query("SELECT DISTINCT servico FROM matriz_safra WHERE servico IS NOT NULL ORDER BY servico")->fetchAll(PDO::FETCH_COLUMN);
     $status_list = $pdo->query("SELECT DISTINCT status FROM matriz_safra WHERE status IS NOT NULL ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
+    $vias_list = $pdo->query("SELECT DISTINCT via_laudo FROM matriz_safra WHERE via_laudo IS NOT NULL AND via_laudo != '' ORDER BY via_laudo")->fetchAll(PDO::FETCH_COLUMN);
+    $patios_list = $pdo->query("SELECT DISTINCT patio FROM matriz_safra WHERE patio IS NOT NULL AND patio != '' ORDER BY patio")->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {}
 
 // --- RESPOSTA AJAX ---
@@ -591,6 +623,26 @@ require __DIR__ . '/includes/header.php';
                     </select>
                 </div>
                 <div class="filter-group">
+                    <label for="via_laudo_filter">VIA</label>
+                    <select name="via_laudo_filter[]" id="via_laudo_filter" multiple="multiple">
+                        <?php foreach ($vias_list as $v): ?>
+                            <option value="<?php echo htmlspecialchars($v); ?>" <?php echo in_array($v, $via_filter) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($v); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="patio_filter">Patio</label>
+                    <select name="patio_filter[]" id="patio_filter" multiple="multiple">
+                        <?php foreach ($patios_list as $p): ?>
+                            <option value="<?php echo htmlspecialchars($p); ?>" <?php echo in_array($p, $patio_filter) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($p); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label for="data_inicio">Data Início</label>
                     <input type="date" name="data_inicio" id="data_inicio" value="<?php echo htmlspecialchars($data_inicio); ?>">
                 </div>
@@ -755,6 +807,22 @@ require __DIR__ . '/includes/header.php';
     $(document).ready(function() {
         $('#status').select2({
             placeholder: "Todos os Status",
+            allowClear: true,
+            width: '100%'
+        }).on('change', function() {
+            loadData(1);
+        });
+
+        $('#via_laudo_filter').select2({
+            placeholder: "Todas as VIAs",
+            allowClear: true,
+            width: '100%'
+        }).on('change', function() {
+            loadData(1);
+        });
+
+        $('#patio_filter').select2({
+            placeholder: "Todos os Patios",
             allowClear: true,
             width: '100%'
         }).on('change', function() {
