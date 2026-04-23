@@ -791,13 +791,40 @@ require __DIR__ . '/includes/header.php';
         
         if (selectAll) {
             selectAll.addEventListener('change', () => {
-                rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+                rowCheckboxes.forEach(cb => {
+                    cb.checked = selectAll.checked;
+                    // Se marcar o "Selecionar Todos", muda todos os selects de "Enviada?" para SIM/NÃO
+                    const row = cb.closest('tr');
+                    const enviadaSelect = row.querySelector('.enviada-select');
+                    const changedFlag = row.querySelector('.changed-flag');
+                    if (enviadaSelect) {
+                        enviadaSelect.value = selectAll.checked ? "1" : enviadaSelect.getAttribute('data-original');
+                        enviadaSelect.classList.remove('status-yes', 'status-no');
+                        enviadaSelect.classList.add(enviadaSelect.value === '1' ? 'status-yes' : 'status-no');
+                    }
+                    if (changedFlag) changedFlag.value = "1";
+                });
                 updateUI();
             });
         }
 
         rowCheckboxes.forEach(cb => {
-            cb.addEventListener('change', updateUI);
+            cb.addEventListener('change', () => {
+                const row = cb.closest('tr');
+                const enviadaSelect = row.querySelector('.enviada-select');
+                const changedFlag = row.querySelector('.changed-flag');
+                
+                // Se o usuário marcar o checkbox manualmente, muda o select para SIM
+                if (cb.checked) {
+                    if (enviadaSelect) {
+                        enviadaSelect.value = "1";
+                        enviadaSelect.classList.remove('status-yes', 'status-no');
+                        enviadaSelect.classList.add('status-yes');
+                    }
+                    if (changedFlag) changedFlag.value = "1";
+                }
+                updateUI();
+            });
         });
 
         const dataInputs = document.querySelectorAll('.data-input');
