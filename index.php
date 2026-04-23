@@ -221,11 +221,21 @@ if ($is_ajax) {
                                        class="edit-input data-input">
                             </td>
                             <td>
-                                <span class="status-badge status-<?php echo ($row['enviada_ao_banco'] ?? false) ? 'true' : 'false'; ?>">
-                                    <?php echo ($row['enviada_ao_banco'] ?? false) ? 'SIM' : 'NÃO'; ?>
-                                </span>
+                                <?php $is_enviada = ($row['enviada_ao_banco'] ?? false); ?>
+                                <select name="enviada_edit[<?php echo $row['id']; ?>]" 
+                                        class="edit-input data-input enviada-select <?php echo $is_enviada ? 'status-yes' : 'status-no'; ?>" 
+                                        data-original="<?php echo $is_enviada ? '1' : '0'; ?>" 
+                                        style="font-size: 10px; padding: 2px;"
+                                        onchange="this.classList.remove('status-yes', 'status-no'); this.classList.add(this.value === '1' ? 'status-yes' : 'status-no');">
+                                    <option value="1" <?php echo $is_enviada ? 'selected' : ''; ?>>SIM</option>
+                                    <option value="0" <?php echo !$is_enviada ? 'selected' : ''; ?>>NÃO</option>
+                                </select>
                             </td>
-                            <td><small><?php echo htmlspecialchars($row['rel'] ?? ''); ?></small></td>
+                            <td>
+                                <input type="text" name="rel_edit[<?php echo $row['id']; ?>]" 
+                                       value="<?php echo htmlspecialchars($row['rel'] ?? ''); ?>" 
+                                       class="edit-input rel-input data-input">
+                            </td>
                             <td><small><?php echo htmlspecialchars($row['status'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['patio'] ?? ''); ?></small></td>
                             <td><small><?php echo htmlspecialchars($row['marca'] ?? ''); ?></small></td>
@@ -882,9 +892,11 @@ require __DIR__ . '/includes/header.php';
         selected.forEach(cb => {
             const row = cb.closest('tr');
             const relInput = row.querySelector('.rel-input');
+            const changedFlag = row.querySelector('.changed-flag');
             if (relInput) {
                 relInput.value = val;
-                // Disparar evento change para marcar como alterado
+                if (changedFlag) changedFlag.value = "1";
+                // Disparar evento change para garantir consistência
                 relInput.dispatchEvent(new Event('change'));
             }
         });
