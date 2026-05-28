@@ -2,3 +2,17 @@ AuthType Basic
 AuthName "Acesso Restrito - Sistema Carvist"
 AuthUserFile "c:/xampp2/htdocs/carvist/.htpasswd"
 Require valid-user
+
+# 1. Impedir a listagem de arquivos nas pastas
+Options -Indexes
+
+# 2. Bloquear acesso a arquivos de configuração e sensíveis
+<FilesMatch "^\.env|^\.htaccess|^\.htpasswd|^\.gitignore|.*\.md$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
