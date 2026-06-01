@@ -1,4 +1,4 @@
-# Bloquear acesso direto via web a esta pasta
+# Bloquear acesso direto via web a esta pasta por padrão
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>
@@ -6,3 +6,14 @@
     Order deny,allow
     Deny from all
 </IfModule>
+
+# Abrir exceção para arquivos de estilo e imagens necessários para o layout
+<FilesMatch "\.(css|png|jpg|jpeg|gif|svg|js)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</FilesMatch>

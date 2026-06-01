@@ -194,7 +194,7 @@ require __DIR__ . '/includes/header.php';
 <div class="import-card">
     <div class="import-header">
         <h2>Importar Planilha / CSV</h2>
-        <p>Selecione um arquivo Excel ou CSV para enviar ao n8n.</p>
+        <p>Selecione um arquivo Excel ou CSV para enviar ao DB</p>
     </div>
 
     <?php if ($message): ?>
