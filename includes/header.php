@@ -28,7 +28,8 @@ if (!empty($carvist_container_wide)) {
 <div class="<?php echo htmlspecialchars($carvist_container_class, ENT_QUOTES, 'UTF-8'); ?>">
 
     <nav>
-        <a href="tabela_precos.php" class="nav-link<?php echo $navActive('precos'); ?>">Tabela de Preços</a>
         <a href="importar.php" class="nav-link<?php echo $navActive('importar'); ?>">Importar</a>
+        <a href="sync.php" class="nav-link<?php echo $navActive('sync'); ?>">Sincronizar</a>
+        <a href="vistorias.php" class="nav-link<?php echo $navActive('vistorias'); ?>">Vistorias</a>
         <a href="docs.php" class="nav-link<?php echo $navActive('docs'); ?>">Documentação</a>
     </nav>
